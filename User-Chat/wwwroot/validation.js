@@ -30,6 +30,7 @@ var savedChat = [];
 var keyChat = [];
 var savedMessage = "";
 var savedChats = "";
+var message = document.getElementById("message");
 var count = 0;
 
 const link = "https://someserver/";
@@ -109,7 +110,7 @@ function sendMessage() {
     localStorage.setItem("isSavedChat", JSON.stringify(true));
     var data = "This is a generated reply";
     var chatMessages = document.getElementById("chatMessages");
-    var message = document.getElementById("message").value;
+    message = document.getElementById("message").value;
     if (JSON.parse(localStorage.getItem(savedMessage)) == null) {
         savedMessage = message;
         keyChat.push(savedMessage);
@@ -200,11 +201,19 @@ function loadHistoryChat(event) {
     });
 }
 
+function pressEnter(event) {
+    if (event.key === "Enter") {
+        event.preventDefault();
+        send.click();
+    }
+}
+
 function createChatMessages() {
     const createDiv = document.createElement("div");
     createDiv.id = "chatMessages";
     chatField.insertBefore(createDiv, askField);
 }
 
+message.addEventListener("keypress", pressEnter);
 send.addEventListener("click", sendMessage);
 inputInit.addEventListener("click", init);
