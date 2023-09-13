@@ -1,36 +1,43 @@
 ﻿var dataInit = {
-    "secret": "strongPassword",
-    "access": ["uuid"],
+    "secret": "",
+    "access": ["d8fbfab8-e0d1-4aab-bc0d-2671b973031d"],
 }
 var dataAsk = {
-    "secret": "strongPassword",
+    "secret": "",
     "question": "",
-    "chat_uuid": "c8821506-0ef7-4029-a16c-c3436aa4254c",
+    "chat_uuid": "e5ad940c-4b37-4c9f-bb59-5fdf3d2c2e4d",
 }
 var dataHistory = {
-    "secret": "strongPassword",
-    "uuid": "uuid",
+    "uuid": "6b7583f2-d641-4db4-875b-2331e40a5008",
 }
 var optionsInit = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dataInit),
+    body: "",
 }
 var optionsAsk = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(dataAsk)
+    body: "",
 }
 var optionsHistory = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(dataHistory),
 }
+var token = "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ1c2VyX2lkIjo2ODk5LCJ1c2VybmFtZSI6ImFuZHJjaGFzNzc3QGdtYWlsLmNvbSIsImV4cCI6MTY5NDE3ODkzNCwiZW1haWwiOiJhbmRyY2hhczc3N0BnbWFpbC5jb20ifQ.6hZJtsFsEHx7llO6-zWFToR44p8xev97v9CcXxAG9a0";
+var optionsToken = {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "JWT " + token },
+    body: "",
+}
 var savedChat = [];
 var keyChat = [];
 var savedMessage = "";
 var savedChats = "";
 var message = document.getElementById("message");
+var action = "";
+var dataFromInit = "";
 var count = 0;
 
 const link = "https://someserver/";
@@ -50,12 +57,22 @@ if (localStorage.getItem("keyChat") != null) {
     loadHistory();
 }
 
-function initFetch() {
-    fetch(link, optionsInit)
+async function initFetch() {
+    var dataToken = {
+        "action": "initialize",
+        "meetings": ["d8fbfab8-e0d1-4aab-bc0d-2671b973031d"],
+    }
+    optionsToken.body = JSON.stringify(dataToken);
+    var response = await fetch("https://blue.wudpecker.io/profile/microservice-token/", optionsToken);
+    var data = await response.json();
+    dataInit.secret = data.token;
+    optionsInit.body = JSON.stringify(dataInit);
+    fetch("https://ask.wudpecker.io/initialize", optionsInit)
         .then(function (response) {
             return response.json();
         })
         .then(function (data) {
+            dataFromInit = data;
             init(data);
         })
         .catch(function (error) {
@@ -63,8 +80,17 @@ function initFetch() {
         })
 }
 
-function askFetch() {
-    fetch(link, optionsAsk)
+async function askFetch() {
+    var dataToken = {
+        "action": "ask",
+        "model": "3.5",
+    }
+    optionsToken.body = JSON.stringify(dataToken);
+    var response = await fetch("https://blue.wudpecker.io/profile/microservice-token/", optionsToken);
+    var data = await response.json();
+    dataAsk.secret = data.token;
+    optionsAsk.body = JSON.stringify(dataAsk);
+    fetch("https://ask.wudpecker.io/ask_question", optionsAsk)
         .then(function (response) {
             return response.json();
         })
@@ -77,17 +103,36 @@ function askFetch() {
 }
 
 function historyFetch() {
-    fetch(link, optionsHistory)
+    fetch("https://ask.wudpecker.io/history", optionsHistory)
         .then(function (response) {
             return response.json();
         })
         .then(function (data) {
+            console.log(data);
             loadHistoryChat(data);
         })
         .catch(function (error) {
             console.error("Error: ", error);
         })
 }
+
+//function tokenFetch() {
+//    fetch("https://blue.wudpecker.io/profile/microservice-token/", optionsToken)
+//        .then(function (response) {
+//            return response.json();
+//        })
+//        .then(function (data) {
+//            if (action == "initialize") {
+//                data.token;
+//            }
+//            else {
+//                dataAsk.secret = data.token;
+//            }
+//        })
+//        .catch(function (error) {
+//            console.error("Error: ", error);
+//        })
+//}
 
 function init(data) {
     if (data != "unauthorized") {
@@ -108,16 +153,20 @@ function init(data) {
 function sendMessage() {
     noSavedConversations.style.visibility = "collapse";
     localStorage.setItem("isSavedChat", JSON.stringify(true));
-    var data = "This is a generated reply";
     var chatMessages = document.getElementById("chatMessages");
     message = document.getElementById("message").value;
-    if (JSON.parse(localStorage.getItem(savedMessage)) == null) {
+    if (JSON.parse(localStorage.getItem(dataFromInit)) == null) {
         savedMessage = message;
-        keyChat.push(savedMessage);
+        var chatInfo = {
+            "message": savedMessage,
+            "uuid": dataFromInit,
+        }
+        keyChat.push(chatInfo);
         const cardOffcanvasDiv = document.createElement("div");
         cardOffcanvasDiv.className = "card text-bg-info rounded-0";
         const cardOffcanvasBodyDiv = document.createElement("div");
         cardOffcanvasBodyDiv.className = "card-body";
+        cardOffcanvasBodyDiv.id = dataFromInit;
         cardOffcanvasBodyDiv.innerHTML = savedMessage;
         cardOffcanvasDiv.appendChild(cardOffcanvasBodyDiv);
         offcanvasBar.appendChild(cardOffcanvasDiv);
@@ -136,21 +185,21 @@ function sendMessage() {
     cardBodyDiv.innerHTML = dataAsk.question;
     cardDiv.appendChild(cardBodyDiv);
     savedChat.push(dataAsk.question);
-    localStorage.setItem(savedMessage, JSON.stringify(savedChat));
+    localStorage.setItem(dataFromInit, JSON.stringify(savedChat));
     chatMessages.appendChild(cardDiv);
-    replyMessage(data, savedMessage, chatMessages);
+    askFetch();
 }
 
-function replyMessage(data, savedMessage, chatMessages) {
+function replyMessage(data) {
     const cardDiv = document.createElement("div");
     cardDiv.className = "card text-bg-light rounded-0 w-50 p-1";
     cardDiv.style.marginLeft = "300px";
     const cardBodyDiv = document.createElement("div");
     cardBodyDiv.className = "card-body";
-    cardBodyDiv.innerHTML = data;
+    cardBodyDiv.innerHTML = data.response;
     cardDiv.appendChild(cardBodyDiv);
-    savedChat.push(data);
-    localStorage.setItem(savedMessage, JSON.stringify(savedChat));
+    savedChat.push(data.response);
+    localStorage.setItem(dataFromInit, JSON.stringify(savedChat));
     chatMessages.appendChild(cardDiv);
 }
 
@@ -160,7 +209,8 @@ function loadHistory() {
         cardOffcanvasDiv.className = "card text-bg-info rounded-0";
         const cardOffcanvasBodyDiv = document.createElement("div");
         cardOffcanvasBodyDiv.className = "card-body";
-        cardOffcanvasBodyDiv.innerHTML = item;
+        cardOffcanvasBodyDiv.id = item.uuid;
+        cardOffcanvasBodyDiv.innerHTML = item.message;
         cardOffcanvasDiv.appendChild(cardOffcanvasBodyDiv);
         offcanvasBar.appendChild(cardOffcanvasDiv);
     });
@@ -180,8 +230,8 @@ function loadHistoryChat(event) {
     createChatMessages();
     chatMessages = document.getElementById("chatMessages");
     savedChat = [];
-    savedMessage = event.target.innerHTML;
-    savedChat = JSON.parse(localStorage.getItem(event.target.innerHTML));
+    dataFromInit = event.target.id;
+    savedChat = JSON.parse(localStorage.getItem(event.target.id));
     savedChat.forEach(item => {
         const cardDiv = document.createElement("div");
         if (isReply) {
@@ -216,4 +266,4 @@ function createChatMessages() {
 
 message.addEventListener("keypress", pressEnter);
 send.addEventListener("click", sendMessage);
-inputInit.addEventListener("click", init);
+inputInit.addEventListener("click", initFetch);
